@@ -208,23 +208,23 @@ graph TD
     style core_metrics fill:#b2dfdb
     style modeling_svc fill:#c8e6c9
     style datasource_svc fill:#dcedc8
-streaming_service fill:#f0f4c3
-    data_loading_svc fill:#fff9c4
-    job_service fill:#ffecb3
-    rec_service fill:#ffe0b2
-    raw_rec_service fill:#ffcc80
-    opt_rec_service fill:#ffb74d
-    model_rec_service fill:#ffa726
-    engine_spark fill:#ffccbc
-    spark_common fill:#ffab91
-    query_srv fill:#ffcc80
-    common_srv fill:#ffb74d
-    metadata_srv fill:#ffa726
-    data_loading_srv fill:#ff9800
-    rec_srv fill:#fb8c00
-    query_booter fill:#fb8c00
-    common_booter fill:#f57c00
-    data_loading_booter fill:#ef6c00
+    style streaming_service fill:#f0f4c3
+    style data_loading_svc fill:#fff9c4
+    style job_service fill:#ffecb3
+    style rec_service fill:#ffe0b2
+    style raw_rec_service fill:#ffcc80
+    style opt_rec_service fill:#ffb74d
+    style model_rec_service fill:#ffa726
+    style engine_spark fill:#ffccbc
+    style spark_common fill:#ffab91
+    style query_srv fill:#ffcc80
+    style common_srv fill:#ffb74d
+    style metadata_srv fill:#ffa726
+    style data_loading_srv fill:#ff9800
+    style rec_srv fill:#fb8c00
+    style query_booter fill:#fb8c00
+    style common_booter fill:#f57c00
+    style data_loading_booter fill:#ef6c00
 ```
 
 ## 3. 核心模块说明
