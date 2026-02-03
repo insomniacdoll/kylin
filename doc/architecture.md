@@ -86,12 +86,15 @@ graph TB
 
     subgraph Infrastructure["基础设施层 (Infrastructure)"]
         direction LR
-        ApacheSpark["Apache Spark<br/>3.3.0"]
         Hadoop["Hadoop/HDFS<br/>2.10.1"]
+        HiveMetastore["Hive Metastore<br/>2.3.10"]
+        ApacheSpark["Apache Spark<br/>3.3.0"]
         Zookeeper["Zookeeper<br/>(集群协调)"]
         Kafka["Kafka<br/>2.8.2<br/>(流式)"]
-        HiveMetastore["Hive Metastore<br/>2.3.10"]
         Redis["Redis<br/>(缓存)"]
+
+        Hadoop --> HiveMetastore
+        Hadoop --> ApacheSpark
     end
 
     WebUI --> Controller
@@ -341,11 +344,15 @@ graph TB
 
     subgraph External["外部服务"]
         direction LR
-        HDFS["HDFS<br/>存储"]
-        Spark["Spark<br/>计算"]
-        Kafka["Kafka<br/>流式"]
-        Zookeeper["Zookeeper<br/>协调"]
-        Redis["Redis<br/>缓存"]
+        Hadoop["Hadoop<br/>(分布式存储)"]
+        HiveMetastore["Hive Metastore<br/>(元数据)"]
+        Spark["Spark<br/>(计算引擎)"]
+        Zookeeper["Zookeeper<br/>(集群协调)"]
+        Kafka["Kafka<br/>(流式)"]
+        Redis["Redis<br/>(缓存)"]
+
+        Hadoop --> HiveMetastore
+        Hadoop --> Spark
     end
 
     AllServices --> External
