@@ -12,10 +12,10 @@ flowchart TD
     Routing --> Exec[查询执行器<br/>QueryExec.execute]
 
     Exec --> Parser[步骤1: SQL解析<br/>Calcite Parser]
-    Parser --> Validator[步骤2: 语义验证<br/>Calcite Validator]
+    Parser --> Validator[步骤2: 语义验证<br/>KylinSqlValidator]
     Validator --> Optimizer[步骤3: 查询优化<br/>QueryOptimizer]
-    Optimizer --> Realization[步骤4: 实现路由<br/>Realization Router]
-    Realization --> Plan[步骤5: 执行计划<br/>CalcitePlanExec/SparderPlanExec]
+    Optimizer --> Router[步骤4: 查询路由<br/>QueryRouter]
+    Router --> Plan[步骤5: 执行计划<br/>CalcitePlanExec/SparderPlanExec]
 
     Plan --> Storage[存储层<br/>Parquet/Delta Storage]
     Storage --> Result[结果处理<br/>序列化/格式转换/记录历史]
@@ -30,7 +30,7 @@ flowchart TD
     style Parser fill:#fff3e0
     style Validator fill:#fff3e0
     style Optimizer fill:#fff3e0
-    style Realization fill:#fff3e0
+    style Router fill:#fff3e0
     style Plan fill:#fff3e0
     style Storage fill:#e0f7fa
     style Result fill:#e0f7fa
@@ -66,14 +66,14 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Start([用户触发构建]) --> Controller[REST 控制器层<br/>JobController.build]
-    Controller --> Service[作业服务层<br/>JobService.submitBuildJob]
+    Start([用户触发构建]) --> Controller[REST 控制器层<br/>SegmentController.buildSegments]
+    Controller --> Service[建模服务层<br/>ModelBuildService.buildSegmentsManually]
     Service --> Manager[作业管理器<br/>ExecutableManager.addJob]
     Manager --> Engine[Spark 构建引擎<br/>NSparkCubingEngine]
     Engine --> Job[SegmentBuildJob.execute]
 
     Job --> Stage1[阶段1: WAIT_FOR_RESOURCE<br/>检查Spark集群资源]
-    Stage1 --> Stage2[阶段2: REFRESH_SNAPSHOT<br/>SnapshotService.refreshSnapshot<br/>构建表快照]
+    Stage1 --> Stage2[阶段2: REFRESH_SNAPSHOT<br/>SnapshotService.autoRefreshSnapshots<br/>构建表快照]
     Stage2 --> Stage3[阶段3: BUILD_FLAT_TABLE_STATS<br/>计算统计信息]
     Stage3 --> Stage4[阶段4: BUILD_GLOBAL_DICT<br/>构建全局字典]
     Stage4 --> Stage5[阶段5: BUILD_LAYER<br/>分层构建Cube]
@@ -148,18 +148,18 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([导入SQL/查询历史]) --> Analyze["推荐服务层<br/>RecService.analyzeQueries<br/>分析查询历史/识别模式"]
-    Analyze --> Extract["提取维度和度量<br/>• 识别GROUP BY列(维度)<br/>• 识别聚合函数(度量)<br/>• 识别过滤条件<br/>• 识别连接关系"]
+    Start([导入SQL/查询历史]) --> RawRec["推荐服务层<br/>RawRecService.generateRawRecommendations<br/>分析查询历史/识别模式"]
+    RawRec --> Extract["提取维度和度量<br/>• 识别GROUP BY列(维度)<br/>• 识别聚合函数(度量)<br/>• 识别过滤条件<br/>• 识别连接关系"]
     Extract --> RecommendModel["推荐模型结构<br/>• 推荐事实表<br/>• 推荐维度表<br/>• 推荐连接关系<br/>• 推荐计算列"]
-    RecommendModel --> RecommendIndex["推荐索引<br/>IndexPlanService.recommendIndex<br/>• 生成聚合索引布局<br/>• 生成表索引布局<br/>• 估算存储成本<br/>• 排序推荐结果"]
-    RecommendIndex --> End([展示推荐结果])
+    RecommendModel --> OptRec["优化推荐服务<br/>OptRecService<br/>• 生成聚合索引布局<br/>• 生成表索引布局<br/>• 估算存储成本<br/>• 排序推荐结果"]
+    OptRec --> End([展示推荐结果])
 
     style Start fill:#e1f5ff
     style End fill:#e1f5ff
-    style Analyze fill:#fce4ec
+    style RawRec fill:#fce4ec
     style Extract fill:#fff3e0
     style RecommendModel fill:#fff3e0
-    style RecommendIndex fill:#fff3e0
+    style OptRec fill:#fff3e0
 ```
 
 ## 4. 流式数据处理流程
@@ -190,32 +190,32 @@ flowchart LR
 sequenceDiagram
     participant User as 用户
     participant UI as Web UI
-    participant Ctrl as NModelController
+    participant ModelCtrl as NModelController
     participant ModelSvc as ModelService
     participant ModelMgr as NDataModelManager
-    participant JobCtrl as JobController
-    participant JobSvc as JobService
+    participant SegCtrl as SegmentController
+    participant ModelBuildSvc as ModelBuildService
     participant Engine as NSparkCubingEngine
 
     User->>UI: 1. 登录并创建模型
-    UI->>Ctrl: 2. POST /api/model
-    Ctrl->>ModelSvc: 3. createModel()
+    UI->>ModelCtrl: 2. POST /api/models
+    ModelCtrl->>ModelSvc: 3. createModel()
     ModelSvc->>ModelMgr: 4. 持久化模型
     ModelMgr-->>ModelSvc: 5. 模型已保存
-    ModelSvc-->>Ctrl: 6. 返回模型ID
-    Ctrl-->>UI: 7. 模型创建成功
+    ModelSvc-->>ModelCtrl: 6. 返回模型ID
+    ModelCtrl-->>UI: 7. 模型创建成功
 
     User->>UI: 8. 创建索引
-    UI->>JobCtrl: 9. POST /api/jobs/build
-    JobCtrl->>JobSvc: 10. submitBuildJob()
-    JobSvc->>Engine: 11. 提交Spark作业
-    Engine-->>JobSvc: 12. 作业已提交
-    JobSvc-->>JobCtrl: 13. 作业ID
-    JobCtrl-->>UI: 14. 作业已启动
+    UI->>SegCtrl: 9. POST /api/models/{model}/indices
+    SegCtrl->>ModelBuildSvc: 10. buildIndicesManually()
+    ModelBuildSvc->>Engine: 11. 提交Spark作业
+    Engine-->>ModelBuildSvc: 12. 作业已提交
+    ModelBuildSvc-->>SegCtrl: 13. 作业ID
+    SegCtrl-->>UI: 14. 作业已启动
 
     Engine->>Engine: 15. 执行构建阶段<br/>[参见数据构建流程]
-    Engine-->>JobSvc: 16. 构建完成
-    JobSvc-->>UI: 17. 通知用户
+    Engine-->>ModelBuildSvc: 16. 构建完成
+    ModelBuildSvc-->>UI: 17. 通知用户
 
     User->>UI: 18. 验证索引状态
     UI-->>User: 19. 显示READY状态
@@ -263,23 +263,23 @@ sequenceDiagram
 sequenceDiagram
     participant User as 用户
     participant UI as Web UI
-    participant JobCtrl as JobController
-    participant JobSvc as JobService
+    participant SegCtrl as SegmentController
+    participant ModelBuildSvc as ModelBuildService
     participant Engine as NSparkCubingEngine
     participant DataflowMgr as NDataflowManager
 
     User->>UI: 1. 确定增量数据范围
     User->>UI: 2. 选择增量构建
-    UI->>JobCtrl: 3. POST /api/jobs/incremental
-    JobCtrl->>JobSvc: 4. submitBuildJob(增量参数)
-    JobSvc->>DataflowMgr: 5. 获取现有Segments
-    DataflowMgr-->>JobSvc: 6. 返回Segment列表
-    JobSvc->>Engine: 7. 提交增量构建
+    UI->>SegCtrl: 3. PUT /api/models/{model}/model_segments
+    SegCtrl->>ModelBuildSvc: 4. incrementBuildSegmentsManually()
+    ModelBuildSvc->>DataflowMgr: 5. 获取现有Segments
+    DataflowMgr-->>ModelBuildSvc: 6. 返回Segment列表
+    ModelBuildSvc->>Engine: 7. 提交增量构建
     Engine->>Engine: 8. 执行增量构建<br/>[仅构建增量数据]
-    Engine-->>JobSvc: 9. 增量Segment完成
-    JobSvc->>DataflowMgr: 10. 添加新Segment
-    DataflowMgr-->>JobSvc: 11. 元数据已更新
-    JobSvc-->>UI: 12. 增量构建完成
+    Engine-->>ModelBuildSvc: 9. 增量Segment完成
+    ModelBuildSvc->>DataflowMgr: 10. 添加新Segment
+    DataflowMgr-->>ModelBuildSvc: 11. 元数据已更新
+    ModelBuildSvc-->>UI: 12. 增量构建完成
 
     User->>UI: 13. 验证增量数据
     UI->>UI: 14. 执行查询
@@ -292,20 +292,21 @@ sequenceDiagram
 sequenceDiagram
     participant User as 用户
     participant UI as Web UI
-    participant RecCtrl as RecController
-    participant RecSvc as RecService
+    participant RecCtrl as RecommendationController
+    participant RawRecSvc as RawRecService
+    participant OptRecSvc as OptRecService
     participant ModelSvc as ModelService
-    participant JobSvc as JobService
+    participant ModelBuildSvc as ModelBuildService
 
     User->>UI: 1. 进入推荐页面
     User->>UI: 2. 上传SQL或使用历史
-    UI->>RecCtrl: 3. POST /api/rec/analyze
-    RecCtrl->>RecSvc: 4. analyzeQueries()
-    RecSvc->>RecSvc: 5. 分析查询模式
-    RecSvc->>RecSvc: 6. 提取维度/度量
-    RecSvc->>RecSvc: 7. 推荐模型结构
-    RecSvc->>RecSvc: 8. 推荐索引
-    RecSvc-->>RecCtrl: 9. 推荐结果
+    UI->>RecCtrl: 3. PUT /api/recommendations/acceleration
+    RecCtrl->>RawRecSvc: 4. generateRawRecommendations()
+    RawRecSvc->>RawRecSvc: 5. 分析查询模式
+    RawRecSvc->>RawRecSvc: 6. 提取维度/度量
+    RawRecSvc->>RawRecSvc: 7. 推荐模型结构
+    RawRecSvc->>OptRecSvc: 8. 生成优化推荐
+    OptRecSvc-->>RecCtrl: 9. 推荐结果
     RecCtrl-->>UI: 10. 显示推荐
     UI-->>User: 11. 查看推荐
 
@@ -314,11 +315,11 @@ sequenceDiagram
     ModelSvc-->>UI: 14. 模型已创建
 
     User->>UI: 15. 构建推荐索引
-    UI->>JobSvc: 16. submitBuildJob()
-    JobSvc-->>UI: 17. 作业已提交
+    UI->>ModelBuildSvc: 16. POST /api/models/{model}/indices
+    ModelBuildSvc-->>UI: 17. 作业已提交
 
-    JobSvc->>JobSvc: 18. 等待构建完成
-    JobSvc-->>UI: 19. 构建完成
+    ModelBuildSvc->>ModelBuildSvc: 18. 等待构建完成
+    ModelBuildSvc-->>UI: 19. 构建完成
 
     User->>UI: 20. 测试查询性能
 ```

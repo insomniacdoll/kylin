@@ -137,13 +137,16 @@ graph TD
     streaming_sdk["streaming-sdk<br/>(流式SDK)"]
     data_loading_svc["data-loading-service<br/>(数据加载服务)"]
     job_service["job-service<br/>(作业服务)"]
-    rec_service["rec-service<br/>(推荐服务)"]
+    raw_rec_service["raw-rec-service<br/>(原始推荐)"]
+    opt_rec_service["opt-rec-service<br/>(优化推荐)"]
+    model_rec_service["model-rec-service<br/>(模型推荐)"]
     engine_spark["engine-spark<br/>(Spark引擎)"]
     spark_common["spark-common<br/>(Spark公共库)"]
     query_srv["query-server<br/>(查询服务器)"]
     common_srv["common-server<br/>(通用服务器)"]
     metadata_srv["metadata-server<br/>(元数据服务器)"]
     data_loading_srv["data-loading-server<br/>(数据加载服务器)"]
+    rec_srv["rec-server<br/>(推荐服务器)"]
     query_booter["query-booter<br/>(查询启动器)"]
     common_booter["common-booter<br/>(通用启动器)"]
     data_loading_booter["data-loading-booter<br/>(数据加载启动器)"]
@@ -165,7 +168,9 @@ graph TD
 
     modeling_svc --> source_hive
     modeling_svc --> data_loading_svc
-    modeling_svc --> rec_service
+    modeling_svc --> raw_rec_service
+    modeling_svc --> opt_rec_service
+    modeling_svc --> model_rec_service
 
     streaming_service --> streaming_sdk
 
@@ -175,11 +180,18 @@ graph TD
 
     engine_spark --> spark_common
 
+    raw_rec_service --> opt_rec_service
+    opt_rec_service --> model_rec_service
+    model_rec_service --> index_plan_mgr
+
     query_service --> query_srv
     query_service --> common_srv
     common_service --> common_srv
     modeling_svc --> metadata_srv
     data_loading_svc --> data_loading_srv
+    raw_rec_service --> rec_srv
+    opt_rec_service --> rec_srv
+    model_rec_service --> rec_srv
 
     query_srv --> query_booter
     common_srv --> common_booter
@@ -196,19 +208,23 @@ graph TD
     style core_metrics fill:#b2dfdb
     style modeling_svc fill:#c8e6c9
     style datasource_svc fill:#dcedc8
-    style streaming_service fill:#f0f4c3
-    style data_loading_svc fill:#fff9c4
-    style job_service fill:#ffecb3
-    style rec_service fill:#ffe0b2
-    style engine_spark fill:#ffccbc
-    style spark_common fill:#ffab91
-    style query_srv fill:#ffcc80
-    style common_srv fill:#ffb74d
-    style metadata_srv fill:#ffa726
-    style data_loading_srv fill:#ff9800
-    style query_booter fill:#fb8c00
-    style common_booter fill:#f57c00
-    style data_loading_booter fill:#ef6c00
+streaming_service fill:#f0f4c3
+    data_loading_svc fill:#fff9c4
+    job_service fill:#ffecb3
+    rec_service fill:#ffe0b2
+    raw_rec_service fill:#ffcc80
+    opt_rec_service fill:#ffb74d
+    model_rec_service fill:#ffa726
+    engine_spark fill:#ffccbc
+    spark_common fill:#ffab91
+    query_srv fill:#ffcc80
+    common_srv fill:#ffb74d
+    metadata_srv fill:#ffa726
+    data_loading_srv fill:#ff9800
+    rec_srv fill:#fb8c00
+    query_booter fill:#fb8c00
+    common_booter fill:#f57c00
+    data_loading_booter fill:#ef6c00
 ```
 
 ## 3. 核心模块说明
@@ -234,7 +250,7 @@ graph TD
 | **job-service** | `src/job-service` | 作业编排服务，负责作业调度和执行协调 |
 | **datasource-service** | `src/datasource-service` | 数据源管理服务 |
 | **streaming-service** | `src/streaming-service` | 流式数据处理服务 |
-| **rec-service** | `src/rec-service` | 推荐引擎服务，自动推荐模型和索引 |
+| **rec-service** | `src/rec-service` | 推荐引擎服务，自动推荐模型和索引。包含 RawRecService（生成原始推荐）、OptRecService（优化推荐）、ModelRecService（模型推荐） |
 
 ### 3.3 引擎模块 (Engine Modules)
 
@@ -255,7 +271,7 @@ graph TD
 | **metadata-server** | `src/metadata-server` | 元数据管理专用服务器 |
 | **data-loading-server** | `src/data-loading-server` | 数据加载专用服务器 |
 | **ops-server** | `src/ops-server` | 运维服务器 |
-| **rec-server** | `src/rec-server` | 推荐引擎服务器 |
+| **rec-server** | `src/rec-server` | 推荐引擎服务器，包含 RecommendationController（优化推荐）、ModelRecController（模型推荐）等控制器 |
 
 ### 3.5 启动器模块 (Booter Modules)
 
