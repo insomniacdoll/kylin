@@ -148,10 +148,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([导入SQL/查询历史]) --> Analyze[推荐服务层<br/>RecService.analyzeQueries<br/>分析查询历史/识别模式]
-    Analyze --> Extract[提取维度和度量<br/>• 识别GROUP BY列(维度)<br/>• 识别聚合函数(度量)<br/>• 识别过滤条件<br/>• 识别连接关系]
-    Extract --> RecommendModel[推荐模型结构<br/>• 推荐事实表<br/>• 推荐维度表<br/>• 推荐连接关系<br/>• 推荐计算列]
-    RecommendModel --> RecommendIndex[推荐索引<br/>IndexPlanService.recommendIndex<br/>• 生成聚合索引布局<br/>• 生成表索引布局<br/>• 估算存储成本<br/>• 排序推荐结果]
+    Start([导入SQL/查询历史]) --> Analyze["推荐服务层<br/>RecService.analyzeQueries<br/>分析查询历史/识别模式"]
+    Analyze --> Extract["提取维度和度量<br/>• 识别GROUP BY列(维度)<br/>• 识别聚合函数(度量)<br/>• 识别过滤条件<br/>• 识别连接关系"]
+    Extract --> RecommendModel["推荐模型结构<br/>• 推荐事实表<br/>• 推荐维度表<br/>• 推荐连接关系<br/>• 推荐计算列"]
+    RecommendModel --> RecommendIndex["推荐索引<br/>IndexPlanService.recommendIndex<br/>• 生成聚合索引布局<br/>• 生成表索引布局<br/>• 估算存储成本<br/>• 排序推荐结果"]
     RecommendIndex --> End([展示推荐结果])
 
     style Start fill:#e1f5ff

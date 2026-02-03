@@ -5,6 +5,7 @@
 ```mermaid
 graph TB
     subgraph Client["客户端层 (Client Layer)"]
+        direction LR
         WebUI["Web UI<br/>(Kystudio)"]
         JDBC["JDBC Driver"]
         BITools["BI Tools<br/>(Tableau等)"]
@@ -12,50 +13,79 @@ graph TB
     end
 
     subgraph Controller["控制器层 (Controller Layer)"]
+        direction LR
+        ProjectCtrl["ProjectCtrl<br/>(项目控制器)"]
+        NModelCtrl["NModelCtrl<br/>(模型控制器)"]
+        TableCtrl["TableCtrl<br/>(表控制器)"]
+        SegmentCtrl["SegmentCtrl<br/>(分段控制器)"]
         NQueryCtrl["NQueryCtrl<br/>(查询控制器)"]
         JobCtrl["JobCtrl<br/>(作业控制器)"]
-        NModelCtrl["NModelCtrl<br/>(模型控制器)"]
-        SegmentCtrl["SegmentCtrl<br/>(分段控制器)"]
-        ProjectCtrl["ProjectCtrl<br/>(项目控制器)"]
-        TableCtrl["TableCtrl<br/>(表控制器)"]
+
+        ProjectCtrl --> NModelCtrl
+        ProjectCtrl --> TableCtrl
+        NModelCtrl --> SegmentCtrl
     end
 
     subgraph Service["服务层 (Service Layer)"]
-        QueryService["QueryService<br/>(查询服务)"]
-        JobService["JobService<br/>(作业服务)"]
+        direction LR
         ModelService["ModelService<br/>(模型服务)"]
+        IndexPlanService["IndexPlanService<br/>(索引计划服务)"]
+        QueryService["QueryService<br/>(查询服务)"]
         AsyncQueryService["AsyncQueryService<br/>(异步查询)"]
         SnapshotService["SnapshotService<br/>(快照服务)"]
-        IndexPlanService["IndexPlanService<br/>(索引计划服务)"]
+        JobService["JobService<br/>(作业服务)"]
+
+        ModelService --> IndexPlanService
+        QueryService --> AsyncQueryService
+        QueryService --> SnapshotService
     end
 
     subgraph Metadata["元数据层 (Metadata Layer)"]
+        direction LR
         NProjectManager["NProjectManager<br/>(项目管理器)"]
         NModelManager["NModelManager<br/>(模型管理器)"]
+        TableMetadataMgr["TableMetadataMgr<br/>(表元数据管理器)"]
         IndexPlanMgr["IndexPlanMgr<br/>(索引计划管理器)"]
         DataflowManager["DataflowManager<br/>(数据流管理器)"]
         SegmentManager["SegmentManager<br/>(分段管理器)"]
-        TableMetadataMgr["TableMetadataMgr<br/>(表元数据管理器)"]
+
+        NProjectManager --> NModelManager
+        NProjectManager --> TableMetadataMgr
+        NModelManager --> IndexPlanMgr
+        NModelManager --> DataflowManager
+        DataflowManager --> SegmentManager
     end
 
     subgraph Engine["引擎层 (Engine Layer)"]
+        direction LR
         QueryRouting["QueryRouting<br/>(查询路由)"]
-        QueryExec["QueryExec<br/>(查询执行器)"]
         CalcitePlanner["CalcitePlanner<br/>(Calcite规划器)"]
         QueryOptimizer["QueryOptimizer<br/>(查询优化器)"]
+        QueryExec["QueryExec<br/>(查询执行器)"]
         NSparkCubingEng["NSparkCubingEng<br/>(Spark构建引擎)"]
         StorageEngine["StorageEngine<br/>(存储引擎)"]
+
+        QueryRouting --> CalcitePlanner
+        CalcitePlanner --> QueryOptimizer
+        QueryOptimizer --> QueryExec
     end
 
     subgraph Storage["存储层 (Storage Layer)"]
+        direction LR
+        InternalTable["InternalTable<br/>(内部表)"]
         ParquetStorage["ParquetStorage<br/>(Parquet存储)"]
         DeltaLake["DeltaLake<br/>(Delta湖)"]
-        InternalTable["InternalTable<br/>(内部表)"]
         HDFS["HDFS<br/>(分布式文件系统)"]
         ResourceStore["ResourceStore<br/>(元数据存储)"]
+
+        InternalTable --> ParquetStorage
+        InternalTable --> DeltaLake
+        ParquetStorage --> HDFS
+        DeltaLake --> HDFS
     end
 
     subgraph Infrastructure["基础设施层 (Infrastructure)"]
+        direction LR
         ApacheSpark["Apache Spark<br/>3.3.0"]
         Hadoop["Hadoop/HDFS<br/>2.10.1"]
         Zookeeper["Zookeeper<br/>(集群协调)"]
@@ -271,12 +301,17 @@ graph TD
 ```mermaid
 graph TB
     subgraph Standalone["独立部署模式"]
+        direction LR
         Booter1["common-booter<br/>(单体启动器)"]
         Server1["common-server<br/>(单体服务器)"]
         AllServices["所有服务模块<br/>(查询/建模/数据加载等)"]
+
+        Booter1 --> Server1
+        Server1 --> AllServices
     end
 
     subgraph Distributed["分布式部署模式"]
+        direction LR
         QueryBooter["query-booter"]
         DataLoadingBooter["data-loading-booter"]
         OpsBooter["ops-booter"]
@@ -292,9 +327,20 @@ graph TB
         DataLoadingService["data-loading-service"]
         ModelingService["modeling-service"]
         RecService["rec-service"]
+
+        QueryBooter --> QueryServer
+        DataLoadingBooter --> DataLoadingServer
+        OpsBooter --> OpsServer
+        RecBooter --> RecServer
+
+        QueryServer --> QueryService
+        DataLoadingServer --> DataLoadingService
+        MetadataServer --> ModelingService
+        RecServer --> RecService
     end
 
     subgraph External["外部服务"]
+        direction LR
         HDFS["HDFS<br/>存储"]
         Spark["Spark<br/>计算"]
         Kafka["Kafka<br/>流式"]
@@ -302,20 +348,7 @@ graph TB
         Redis["Redis<br/>缓存"]
     end
 
-    Booter1 --> Server1
-    Server1 --> AllServices
     AllServices --> External
-
-    QueryBooter --> QueryServer
-    DataLoadingBooter --> DataLoadingServer
-    OpsBooter --> OpsServer
-    RecBooter --> RecServer
-
-    QueryServer --> QueryService
-    DataLoadingServer --> DataLoadingService
-    MetadataServer --> ModelingService
-    RecServer --> RecService
-
     QueryService --> External
     DataLoadingService --> External
     ModelingService --> External
